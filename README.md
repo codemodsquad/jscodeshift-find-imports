@@ -39,11 +39,11 @@ The jscodeshift-wrapped AST of source code
 ### `statements`
 
 The AST of an `ImportDeclaration` or `VariableDeclaration` containing `require`
-calls to search for, or an array of them.
+calls to search for (e.g. `const foo = require('foo')`), or an array of them.
 
 ## Returns
 
-An object where the key is the identifier from your search statement(s), and the
-value is the local binding for that import. For example, if you search for
+An object where each key is an identifier from your search statement(s) that was found, and the
+corresponding value is the local binding for that import. For example, if you search for
 `const {bar} = require('bar')` but the source code has `const foo = require('bar').bar`,
 the result will have `bar: foo`.
