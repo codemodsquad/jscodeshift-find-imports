@@ -1,30 +1,49 @@
-# untranspiled-js-library-skeleton
+# jscodeshift-find-imports
 
-[![CircleCI](https://circleci.com/gh/jedwards1211/untranspiled-js-library-skeleton?style=svg)](https://circleci.com/gh/jedwards1211/untranspiled-js-library-skeleton)
-[![Coverage Status](https://codecov.io/gh/jedwards1211/untranspiled-js-library-skeleton/branch/master/graph/badge.svg)](https://codecov.io/gh/jedwards1211/untranspiled-js-library-skeleton)
+[![CircleCI](https://circleci.com/gh/jedwards1211/jscodeshift-find-imports?style=svg)](https://circleci.com/gh/jedwards1211/jscodeshift-find-imports)
+[![Coverage Status](https://codecov.io/gh/jedwards1211/jscodeshift-find-imports/branch/master/graph/badge.svg)](https://codecov.io/gh/jedwards1211/jscodeshift-find-imports)
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
-[![npm version](https://badge.fury.io/js/untranspiled-js-library-skeleton.svg)](https://badge.fury.io/js/untranspiled-js-library-skeleton)
+[![npm version](https://badge.fury.io/js/jscodeshift-find-imports.svg)](https://badge.fury.io/js/jscodeshift-find-imports)
 
-This is my personal skeleton for creating an untranspiled JS library npm package. You are welcome to use it.
+find imported/required identifiers with jscodeshift
 
-## Quick start
+# Usage
 
-```sh
-npx 0-60 clone https://github.com/jedwards1211/untranspiled-js-library-skeleton.git
+```
+npm i jscodeshift-find-imports
 ```
 
-## Tools used
+```js
+const findImports = require('jscodeshift-find-imports')
+const j = require('jscodeshift')
+const { statement } = j.template
 
-- mocha
-- chai
-- istanbul
-- nyc
-- eslint
-- eslint-watch
-- flow
-- flow-watch
-- husky
-- semantic-release
-- Travis CI
-- Coveralls
+const code = `
+import bar from 'foo'
+`
+
+const imports = findImports(j(code), statement`import foo from 'foo'`)
+
+console.log(imports) // {foo: 'bar'}
+```
+
+# `findImports(root, statements)`
+
+## Arguments
+
+### `root`
+
+The jscodeshift-wrapped AST of source code
+
+### `statements`
+
+The AST of an `ImportDeclaration` or `VariableDeclaration` containing `require`
+calls to search for, or an array of them.
+
+## Returns
+
+An object where the key is the identifier from your search statement(s), and the
+value is the local binding for that import. For example, if you search for
+`const {bar} = require('bar')` but the source code has `const foo = require('bar').bar`,
+the result will have `bar: foo`.
