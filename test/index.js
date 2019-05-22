@@ -52,6 +52,44 @@ describe(`findImports`, function() {
       expect(result).to.deep.equal({
         Foo: 'Baz',
       })
+      const result2 = findImports(
+        j(code),
+        statement`import {default as Foo} from 'baz'`
+      )
+      expect(result2).to.deep.equal({
+        Foo: 'Baz',
+      })
+    })
+    it(`works for default type imports`, function() {
+      const code = `import type Baz from 'baz'`
+      const result = findImports(j(code), statement`import type Foo from 'baz'`)
+      expect(result).to.deep.equal({
+        Foo: 'Baz',
+      })
+      const result2 = findImports(
+        j(code),
+        statement`import {type default as Foo} from 'baz'`
+      )
+      expect(result2).to.deep.equal({
+        Foo: 'Baz',
+      })
+    })
+    it(`works for default typeof imports`, function() {
+      const code = `import typeof Baz from 'baz'`
+      const result = findImports(
+        j(code),
+        statement`import typeof Foo from 'baz'`
+      )
+      expect(result).to.deep.equal({
+        Foo: 'Baz',
+      })
+      const result2 = findImports(
+        j(code),
+        statement`import {typeof default as Foo} from 'baz'`
+      )
+      expect(result2).to.deep.equal({
+        Foo: 'Baz',
+      })
     })
     it(`works for funky default imports`, function() {
       const code = `import {default as Baz} from 'baz'`
@@ -61,6 +99,41 @@ describe(`findImports`, function() {
       )
       expect(result).to.deep.equal({
         Foo: 'Baz',
+      })
+    })
+    it(`works for funky default type imports`, function() {
+      const code = `import {type default as Baz} from 'baz'`
+      const result = findImports(j(code), statement`import type Foo from 'baz'`)
+      expect(result).to.deep.equal({
+        Foo: 'Baz',
+      })
+    })
+    it(`works for funky default typeof imports`, function() {
+      const code = `import {typeof default as Baz} from 'baz'`
+      const result = findImports(
+        j(code),
+        statement`import typeof Foo from 'baz'`
+      )
+      expect(result).to.deep.equal({
+        Foo: 'Baz',
+      })
+    })
+    it(`works for mixed value and type imports`, function() {
+      const code = `import {foo, type bar} from 'baz'`
+      const result = findImports(j(code), [
+        statement`import {foo} from 'baz'`,
+        statement`import type {bar} from 'baz'`,
+      ])
+      expect(result).to.deep.equal({
+        foo: 'foo',
+        bar: 'bar',
+      })
+      const result2 = findImports(
+        j(code),
+        statement`import {type foo, type bar} from 'baz'`
+      )
+      expect(result2).to.deep.equal({
+        bar: 'bar',
       })
     })
     it(`works for non-default import specifiers with aliases`, function() {

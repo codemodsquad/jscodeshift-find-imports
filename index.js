@@ -46,7 +46,6 @@ module.exports = function findImports(root, statement) {
     throw new Error('invalid statement type: ' + statement.type)
   }
   const imports = root.find(j.ImportDeclaration, {
-    importKind,
     source: { value: source },
   })
   const requires = []
@@ -77,22 +76,36 @@ module.exports = function findImports(root, statement) {
       }
     })
 
-  function findImport(imported) {
+  function getImportKind(path) {
+    return (
+      path.node.importKind ||
+      (path.parent && path.parent.node.importKind) ||
+      'value'
+    )
+  }
+
+  function findImport(imported, importKind) {
     let matches
     if (imported === 'default') {
-      matches = imports.find(j.ImportDefaultSpecifier)
-      if (matches.size()) return matches.paths()[0].node.local.name
-      matches = imports.find(j.ImportSpecifier, {
-        imported: { name: 'default' },
-      })
-      if (matches.size()) return matches.paths()[0].node.local.name
+      matches = imports
+        .find(j.ImportDefaultSpecifier)
+        .filter(p => getImportKind(p) === importKind)
+      if (matches.size()) return matches.nodes()[0].local.name
+      matches = imports
+        .find(j.ImportSpecifier, {
+          imported: { name: 'default' },
+        })
+        .filter(p => getImportKind(p) === importKind)
+      if (matches.size()) return matches.nodes()[0].local.name
       if (defaultRequires.length)
         return defaultRequires[defaultRequires.length - 1].id.name
     } else {
-      matches = imports.find(j.ImportSpecifier, {
-        imported: { name: imported },
-      })
-      if (matches.size()) return matches.paths()[0].node.local.name
+      matches = imports
+        .find(j.ImportSpecifier, {
+          imported: { name: imported },
+        })
+        .filter(p => getImportKind(p) === importKind)
+      if (matches.size()) return matches.nodes()[0].local.name
     }
     for (let node of requires) {
       if (node.id.type !== 'ObjectPattern') continue
@@ -113,7 +126,8 @@ module.exports = function findImports(root, statement) {
         const found = findImport(
           desiredSpecifier.type === 'ImportDefaultSpecifier'
             ? 'default'
-            : desiredSpecifier.imported.name
+            : desiredSpecifier.imported.name,
+          desiredSpecifier.importKind || importKind
         )
         if (found) result[desiredSpecifier.local.name] = found
       }
@@ -124,7 +138,7 @@ module.exports = function findImports(root, statement) {
       for (let prop of id.properties) {
         const key = prop.key.name,
           value = prop.value.name
-        const found = findImport(key)
+        const found = findImport(key, 'value')
         if (found) result[value] = found
       }
     }
