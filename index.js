@@ -97,8 +97,13 @@ module.exports = function findImports(root, statement) {
         })
         .filter(p => getImportKind(p) === importKind)
       if (matches.size()) return matches.nodes()[0].local.name
-      if (defaultRequires.length)
+      if (defaultRequires.length) {
         return defaultRequires[defaultRequires.length - 1].id.name
+      }
+
+      for (let node of requires) {
+        if (node.id.type === 'Identifier') return node.id.name
+      }
     } else {
       matches = imports
         .find(j.ImportSpecifier, {

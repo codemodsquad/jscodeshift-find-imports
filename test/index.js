@@ -36,6 +36,14 @@ describe(`findImports`, function() {
         qux: 'foo',
       })
     })
+    it(`works for default imports`, function() {
+      const code = `import foo from 'baz'`
+      expect(
+        findImports(j(code), statement`const {default: qux} = require('baz')`)
+      ).to.deep.equal({
+        qux: 'foo',
+      })
+    })
     it(`works for default requires`, function() {
       const code = `const foo = require('baz')`
       expect(
@@ -179,14 +187,21 @@ import type {foo as qlob} from 'baz'`
         R: 'React',
       })
     })
-    it(`works for require defaults with commonjs: false`, function() {
+    it(`works for commonjs requires`, function() {
+      const code = `const bar = require('foo')`
+      const result = findImports(j(code), statement`import foo from 'foo'`)
+      expect(result).to.deep.equal({
+        foo: 'bar',
+      })
+    })
+    it(`works for require defaults`, function() {
       const code = `const bar = require('foo').default`
       const result = findImports(j(code), statement`import foo from 'foo'`)
       expect(result).to.deep.equal({
         foo: 'bar',
       })
     })
-    it(`works for destructured require defaults with commonjs: false`, function() {
+    it(`works for destructured require defaults`, function() {
       const code = `const {default: bar} = require('foo')`
       const result = findImports(j(code), statement`import foo from 'foo'`)
       expect(result).to.deep.equal({
