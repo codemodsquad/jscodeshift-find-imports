@@ -58,15 +58,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jedwards1211/jscodeshift-find-imports.git"
+    "url": "https://github.com/codemodsquad/jscodeshift-find-imports.git"
   },
   "keywords": [
     "jscodeshift"
   ],
   "bugs": {
-    "url": "https://github.com/jedwards1211/jscodeshift-find-imports/issues"
+    "url": "https://github.com/codemodsquad/jscodeshift-find-imports/issues"
   },
-  "homepage": "https://github.com/jedwards1211/jscodeshift-find-imports#readme",
+  "homepage": "https://github.com/codemodsquad/jscodeshift-find-imports#readme",
   "devDependencies": {
     "@commitlint/cli": "^6.0.2",
     "@commitlint/config-conventional": "^6.0.2",
