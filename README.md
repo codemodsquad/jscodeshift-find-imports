@@ -25,7 +25,7 @@ import bar from 'foo'
 
 const imports = findImports(j(code), statement`import foo from 'foo'`)
 
-console.log(imports) // {foo: 'bar'}
+console.log(imports) // {foo: {type: 'Identifier', name: 'bar'}}
 ```
 
 # `findImports(root, statements)`
@@ -44,6 +44,6 @@ calls to search for (e.g. `const foo = require('foo')`), or an array of them.
 ## Returns
 
 An object where each key is an identifier from your search statement(s) that was found, and the
-corresponding value is the local binding for that import. For example, if you search for
-`const {bar} = require('bar')` but the source code has `const foo = require('bar').bar`,
-the result will have `bar: foo`.
+corresponding value is the AST for the local binding for that import (either an `Identifier` or
+`MemberExpression` node). For example, if you search for `const {bar} = require('bar')` but the
+source code has `const foo = require('bar').bar`, the result will have `bar: j.identifier(foo)`.

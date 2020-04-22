@@ -1,5 +1,3 @@
-// @flow
-
 const { describe, it } = require('mocha')
 const { expect } = require('chai')
 const jscodeshift = require('jscodeshift')
@@ -8,6 +6,13 @@ const findImports = require('..')
 
 const j = jscodeshift.withParser('babylon')
 const { statement } = j.template
+const generate = require('@babel/generator').default
+const mapValues = require('lodash/mapValues')
+
+function testCase(code, statement, expected) {
+  const actual = findImports(j(code), statement)
+  expect(mapValues(actual, ast => generate(ast).code)).to.deep.equal(expected)
+}
 
 describe(`findImports`, function() {
   describe(`for require statement`, function() {
@@ -21,208 +26,181 @@ describe(`findImports`, function() {
       ).to.throw(Error)
     })
     it(`works for non-default imports with alias`, function() {
-      const code = `import {foo as bar} from 'baz'`
-      expect(
-        findImports(j(code), statement`const {foo: qux} = require('baz')`)
-      ).to.deep.equal({
-        qux: 'bar',
-      })
+      testCase(
+        `import {foo as bar} from 'baz'`,
+        statement`const {foo: qux} = require('baz')`,
+        { qux: 'bar' }
+      )
     })
     it(`works for non-default imports without alias`, function() {
-      const code = `import {foo} from 'baz'`
-      expect(
-        findImports(j(code), statement`const {foo: qux} = require('baz')`)
-      ).to.deep.equal({
-        qux: 'foo',
-      })
+      testCase(
+        `import {foo} from 'baz'`,
+        statement`const {foo: qux} = require('baz')`,
+        { qux: 'foo' }
+      )
     })
     it(`works for default imports`, function() {
-      const code = `import foo from 'baz'`
-      expect(
-        findImports(j(code), statement`const {default: qux} = require('baz')`)
-      ).to.deep.equal({
-        qux: 'foo',
-      })
+      testCase(
+        `import foo from 'baz'`,
+        statement`const {default: qux} = require('baz')`,
+        { qux: 'foo' }
+      )
     })
     it(`works for default requires`, function() {
-      const code = `const foo = require('baz')`
-      expect(
-        findImports(j(code), statement`const qux = require('baz')`)
-      ).to.deep.equal({
-        qux: 'foo',
-      })
+      testCase(
+        `const foo = require('baz')`,
+        statement`const qux = require('baz')`,
+        { qux: 'foo' }
+      )
     })
   })
   describe(`for import statement`, function() {
     it(`works for default imports`, function() {
       const code = `import Baz from 'baz'`
-      const result = findImports(j(code), statement`import Foo from 'baz'`)
-      expect(result).to.deep.equal({
+      testCase(code, statement`import Foo from 'baz'`, {
         Foo: 'Baz',
       })
-      const result2 = findImports(
-        j(code),
-        statement`import {default as Foo} from 'baz'`
-      )
-      expect(result2).to.deep.equal({
+      testCase(code, statement`import {default as Foo} from 'baz'`, {
         Foo: 'Baz',
       })
     })
     it(`works for default type imports`, function() {
       const code = `import type Baz from 'baz'`
-      const result = findImports(j(code), statement`import type Foo from 'baz'`)
-      expect(result).to.deep.equal({
+      testCase(code, statement`import type Foo from 'baz'`, {
         Foo: 'Baz',
       })
-      const result2 = findImports(
-        j(code),
-        statement`import {type default as Foo} from 'baz'`
-      )
-      expect(result2).to.deep.equal({
+      testCase(code, statement`import {type default as Foo} from 'baz'`, {
         Foo: 'Baz',
       })
     })
     it(`works for default typeof imports`, function() {
       const code = `import typeof Baz from 'baz'`
-      const result = findImports(
-        j(code),
-        statement`import typeof Foo from 'baz'`
-      )
-      expect(result).to.deep.equal({
+      testCase(code, statement`import typeof Foo from 'baz'`, {
         Foo: 'Baz',
       })
-      const result2 = findImports(
-        j(code),
-        statement`import {typeof default as Foo} from 'baz'`
-      )
-      expect(result2).to.deep.equal({
+      testCase(code, statement`import {typeof default as Foo} from 'baz'`, {
         Foo: 'Baz',
       })
     })
     it(`works for funky default imports`, function() {
-      const code = `import {default as Baz} from 'baz'`
-      const result = findImports(
-        j(code),
-        statement`import {default as Foo} from 'baz'`
+      testCase(
+        `import {default as Baz} from 'baz'`,
+        statement`import {default as Foo} from 'baz'`,
+        { Foo: 'Baz' }
       )
-      expect(result).to.deep.equal({
-        Foo: 'Baz',
-      })
     })
     it(`works for funky default type imports`, function() {
-      const code = `import {type default as Baz} from 'baz'`
-      const result = findImports(j(code), statement`import type Foo from 'baz'`)
-      expect(result).to.deep.equal({
-        Foo: 'Baz',
-      })
+      testCase(
+        `import {type default as Baz} from 'baz'`,
+        statement`import type Foo from 'baz'`,
+        { Foo: 'Baz' }
+      )
     })
     it(`works for funky default typeof imports`, function() {
-      const code = `import {typeof default as Baz} from 'baz'`
-      const result = findImports(
-        j(code),
-        statement`import typeof Foo from 'baz'`
+      testCase(
+        `import {typeof default as Baz} from 'baz'`,
+        statement`import typeof Foo from 'baz'`,
+        { Foo: 'Baz' }
       )
-      expect(result).to.deep.equal({
-        Foo: 'Baz',
-      })
     })
     it(`works for mixed value and type imports`, function() {
       const code = `import {foo, type bar} from 'baz'`
-      const result = findImports(j(code), [
-        statement`import {foo} from 'baz'`,
-        statement`import type {bar} from 'baz'`,
-      ])
-      expect(result).to.deep.equal({
-        foo: 'foo',
-        bar: 'bar',
-      })
-      const result2 = findImports(
-        j(code),
-        statement`import {type foo, type bar} from 'baz'`
+      testCase(
+        code,
+        [
+          statement`import {foo} from 'baz'`,
+          statement`import type {bar} from 'baz'`,
+        ],
+        { foo: 'foo', bar: 'bar' }
       )
-      expect(result2).to.deep.equal({
+      testCase(code, statement`import {type foo, type bar} from 'baz'`, {
         bar: 'bar',
       })
     })
     it(`works for non-default import specifiers with aliases`, function() {
-      const code = `import {foo as bar} from 'baz'`
-      const result = findImports(
-        j(code),
-        statement`import {foo as qux} from 'baz'`
+      testCase(
+        `import {foo as bar} from 'baz'`,
+        statement`import {foo as qux} from 'baz'`,
+        { qux: 'bar' }
       )
-      expect(result).to.deep.equal({
-        qux: 'bar',
-      })
     })
     it(`works for non-default import type specifiers with aliases`, function() {
-      const code = `
-import {foo as bar} from 'baz'
-import type {foo as qlob} from 'baz'`
-      const result = findImports(
-        j(code),
-        statement`import type {foo as qux} from 'baz'`
+      testCase(
+        `
+        import {foo as bar} from 'baz'
+        import type {foo as qlob} from 'baz'`,
+        statement`import type {foo as qux} from 'baz'`,
+        { qux: 'qlob' }
       )
-      expect(result).to.deep.equal({
-        qux: 'qlob',
-      })
     })
     it(`works for non-default import specifiers without aliases`, function() {
-      const code = `import {foo} from 'baz'`
-      const result = findImports(j(code), statement`import {foo} from 'baz'`)
-      expect(result).to.deep.equal({
+      testCase(`import {foo} from 'baz'`, statement`import {foo} from 'baz'`, {
         foo: 'foo',
       })
     })
     it(`works for non-default require specifiers with aliases`, function() {
-      const code = `const {foo: bar} = require('baz')`
-      const result = findImports(j(code), statement`import {foo} from 'baz'`)
-      expect(result).to.deep.equal({
-        foo: 'bar',
-      })
+      testCase(
+        `const {foo: bar} = require('baz')`,
+        statement`import {foo} from 'baz'`,
+        { foo: 'bar' }
+      )
     })
     it(`works for namespace imports`, function() {
-      const code = `import * as React from 'react'`
-      const result = findImports(j(code), statement`import * as R from 'react'`)
-      expect(result).to.deep.equal({
-        R: 'React',
-      })
+      testCase(
+        `import * as React from 'react'`,
+        statement`import * as R from 'react'`,
+        { R: 'React' }
+      )
+    })
+    it(`works for members of namespace imports`, function() {
+      testCase(
+        `import * as R from 'react'`,
+        statement`import {Component as C} from 'react'`,
+        { C: 'R.Component' }
+      )
     })
     it(`works for commonjs requires`, function() {
-      const code = `const bar = require('foo')`
-      const result = findImports(j(code), statement`import foo from 'foo'`)
-      expect(result).to.deep.equal({
+      testCase(`const bar = require('foo')`, statement`import foo from 'foo'`, {
         foo: 'bar',
       })
     })
     it(`works for require defaults`, function() {
-      const code = `const bar = require('foo').default`
-      const result = findImports(j(code), statement`import foo from 'foo'`)
-      expect(result).to.deep.equal({
-        foo: 'bar',
-      })
+      testCase(
+        `const bar = require('foo').default`,
+        statement`import foo from 'foo'`,
+        { foo: 'bar' }
+      )
     })
     it(`works for destructured require defaults`, function() {
-      const code = `const {default: bar} = require('foo')`
-      const result = findImports(j(code), statement`import foo from 'foo'`)
-      expect(result).to.deep.equal({
-        foo: 'bar',
-      })
+      testCase(
+        `const {default: bar} = require('foo')`,
+        statement`import foo from 'foo'`,
+        { foo: 'bar' }
+      )
+    })
+    it(`works for members of commonjs imports`, function() {
+      testCase(
+        `const R = require('react')`,
+        statement`import {Component as C} from 'react'`,
+        { C: 'R.Component' }
+      )
     })
   })
   it(`works with multiple statements, specifiers, and declarators`, function() {
-    const code = `const {foo: _foo, bar: _bar} = require('foo')
-    import baz, {qux} from 'baz'
-    `
-    expect(
-      findImports(j(code), [
+    testCase(
+      `const {foo: _foo, bar: _bar} = require('foo')
+      import baz, {qux} from 'baz'
+      `,
+      [
         statement`const {foo, bar} = require('foo')`,
         statement`import blah, {qux} from 'baz'`,
-      ])
-    ).to.deep.equal({
-      foo: '_foo',
-      bar: '_bar',
-      blah: 'baz',
-      qux: 'qux',
-    })
+      ],
+      {
+        foo: '_foo',
+        bar: '_bar',
+        blah: 'baz',
+        qux: 'qux',
+      }
+    )
   })
 })

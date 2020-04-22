@@ -90,19 +90,19 @@ module.exports = function findImports(root, statement) {
       matches = imports
         .find(j.ImportDefaultSpecifier)
         .filter(p => getImportKind(p) === importKind)
-      if (matches.size()) return matches.nodes()[0].local.name
+      if (matches.size()) return matches.nodes()[0].local
       matches = imports
         .find(j.ImportSpecifier, {
           imported: { name: 'default' },
         })
         .filter(p => getImportKind(p) === importKind)
-      if (matches.size()) return matches.nodes()[0].local.name
+      if (matches.size()) return matches.nodes()[0].local
       if (defaultRequires.length) {
-        return defaultRequires[defaultRequires.length - 1].id.name
+        return defaultRequires[defaultRequires.length - 1].id
       }
 
       for (let node of requires) {
-        if (node.id.type === 'Identifier') return node.id.name
+        if (node.id.type === 'Identifier') return node.id
       }
     } else {
       matches = imports
@@ -110,13 +110,25 @@ module.exports = function findImports(root, statement) {
           imported: { name: imported },
         })
         .filter(p => getImportKind(p) === importKind)
-      if (matches.size()) return matches.nodes()[0].local.name
+      if (matches.size()) return matches.nodes()[0].local
     }
     for (let node of requires) {
-      if (node.id.type !== 'ObjectPattern') continue
-      for (let prop of node.id.properties) {
-        if (prop.key.name === imported) return prop.value.name
+      switch (node.id.type) {
+        case 'ObjectPattern':
+          for (let prop of node.id.properties) {
+            if (prop.key.name === imported) return prop.value
+          }
+          break
+        case 'Identifier':
+          return j.memberExpression(node.id, j.identifier(imported))
       }
+    }
+    const namespace = imports.find(j.ImportNamespaceSpecifier)
+    if (namespace.size()) {
+      return j.memberExpression(
+        namespace.nodes()[0].local,
+        j.identifier(imported)
+      )
     }
   }
 
@@ -126,7 +138,7 @@ module.exports = function findImports(root, statement) {
       if (desiredSpecifier.type === 'ImportNamespaceSpecifier') {
         const found = imports.find(j.ImportNamespaceSpecifier)
         if (found.size())
-          result[desiredSpecifier.local.name] = found.nodes()[0].local.name
+          result[desiredSpecifier.local.name] = found.nodes()[0].local
       } else {
         const found = findImport(
           desiredSpecifier.type === 'ImportDefaultSpecifier'
@@ -150,7 +162,7 @@ module.exports = function findImports(root, statement) {
     if (id.type === 'Identifier') {
       for (let node of requires) {
         if (node.id.type === 'Identifier') {
-          result[id.name] = node.id.name
+          result[id.name] = node.id
           break
         }
       }
