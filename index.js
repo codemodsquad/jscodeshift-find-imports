@@ -1,5 +1,21 @@
 const j = require('jscodeshift')
 
+function getKey(key) {
+  switch (key.type) {
+    case 'Identifier':
+      return key.name
+    case 'Literal':
+    case 'StringLiteral':
+      return key.value
+  }
+}
+
+function memberExpression(object, property) {
+  const result = j.memberExpression(object, property)
+  if (property.type !== 'Identifier') result.computed = true
+  return result
+}
+
 /**
  * Searches for imports and require statements in an AST for specifiers
  * corresponding those in the requested statement.
@@ -11,7 +27,7 @@ const j = require('jscodeshift')
 module.exports = function findImports(root, statement) {
   if (Array.isArray(statement)) {
     const result = {}
-    statement.forEach(s => Object.assign(result, findImports(root, s)))
+    statement.forEach((s) => Object.assign(result, findImports(root, s)))
     return result
   }
 
@@ -23,7 +39,7 @@ module.exports = function findImports(root, statement) {
     const { declarations } = statement
     if (declarations.length !== 1) {
       const result = {}
-      declarations.forEach(d =>
+      declarations.forEach((d) =>
         Object.assign(
           result,
           findImports(root, Object.assign({}, statement, { declarations: [d] }))
@@ -53,7 +69,7 @@ module.exports = function findImports(root, statement) {
   root
     .find(j.Program)
     .nodes()[0]
-    .body.forEach(node => {
+    .body.forEach((node) => {
       if (node.type !== 'VariableDeclaration') return
       for (let declarator of node.declarations) {
         const { init } = declarator
@@ -84,18 +100,18 @@ module.exports = function findImports(root, statement) {
     )
   }
 
-  function findImport(imported, importKind) {
+  function findImport(imported, importKind, importedNode) {
     let matches
     if (imported === 'default') {
       matches = imports
         .find(j.ImportDefaultSpecifier)
-        .filter(p => getImportKind(p) === importKind)
+        .filter((p) => getImportKind(p) === importKind)
       if (matches.size()) return matches.nodes()[0].local
       matches = imports
         .find(j.ImportSpecifier, {
           imported: { name: 'default' },
         })
-        .filter(p => getImportKind(p) === importKind)
+        .filter((p) => getImportKind(p) === importKind)
       if (matches.size()) return matches.nodes()[0].local
       if (defaultRequires.length) {
         return defaultRequires[defaultRequires.length - 1].id
@@ -109,32 +125,35 @@ module.exports = function findImports(root, statement) {
         .find(j.ImportSpecifier, {
           imported: { name: imported },
         })
-        .filter(p => getImportKind(p) === importKind)
+        .filter((p) => getImportKind(p) === importKind)
       if (matches.size()) return matches.nodes()[0].local
     }
     for (let node of requires) {
       switch (node.id.type) {
         case 'ObjectPattern':
           for (let prop of node.id.properties) {
-            if (prop.key.name === imported) return prop.value
+            if (getKey(prop.key) === imported) return prop.value
           }
           break
         case 'Identifier':
-          return j.memberExpression(node.id, j.identifier(imported))
+          return memberExpression(
+            node.id,
+            importedNode || j.identifier(imported)
+          )
       }
     }
     const namespace = imports.find(j.ImportNamespaceSpecifier)
     if (namespace.size()) {
-      return j.memberExpression(
+      return memberExpression(
         namespace.nodes()[0].local,
-        j.identifier(imported)
+        importedNode || j.identifier(imported)
       )
     }
   }
 
   const result = {}
   if (statement.type === 'ImportDeclaration') {
-    statement.specifiers.forEach(desiredSpecifier => {
+    statement.specifiers.forEach((desiredSpecifier) => {
       if (desiredSpecifier.type === 'ImportNamespaceSpecifier') {
         const found = imports.find(j.ImportNamespaceSpecifier)
         if (found.size())
@@ -153,9 +172,11 @@ module.exports = function findImports(root, statement) {
     const { id } = statement.declarations[0]
     if (id.type === 'ObjectPattern') {
       for (let prop of id.properties) {
-        const key = prop.key.name,
-          value = prop.value.name
-        const found = findImport(key, 'value')
+        if (prop.type !== 'ObjectProperty' && prop.type !== 'Property') continue
+        const key = getKey(prop.key)
+        const value = getKey(prop.value)
+        if (typeof key !== 'string' || typeof value !== 'string') continue
+        const found = findImport(key, 'value', prop.key)
         if (found) result[value] = found
       }
     }

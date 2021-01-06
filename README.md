@@ -28,6 +28,18 @@ const imports = findImports(j(code), statement`import foo from 'foo'`)
 console.log(imports) // {foo: {type: 'Identifier', name: 'bar'}}
 ```
 
+# Compatibility
+
+Currently tested and working with `jscodeshift@0.11.0` and the following parsers:
+
+* `'babel'`
+* `'babylon'`
+* `'ts'`
+* `'flow'`
+
+It won't likely work with other custom parsers unless they output nodes in the same format as
+Babel for import declarations, variable declarations, require calls, and object patterns.
+
 # `findImports(root, statements)`
 
 ## Arguments
