@@ -11,7 +11,7 @@ const j = require('jscodeshift')
 module.exports = function findImports(root, statement) {
   if (Array.isArray(statement)) {
     const result = {}
-    statement.forEach(s => Object.assign(result, findImports(root, s)))
+    statement.forEach((s) => Object.assign(result, findImports(root, s)))
     return result
   }
 
@@ -23,7 +23,7 @@ module.exports = function findImports(root, statement) {
     const { declarations } = statement
     if (declarations.length !== 1) {
       const result = {}
-      declarations.forEach(d =>
+      declarations.forEach((d) =>
         Object.assign(
           result,
           findImports(root, Object.assign({}, statement, { declarations: [d] }))
@@ -53,7 +53,7 @@ module.exports = function findImports(root, statement) {
   root
     .find(j.Program)
     .nodes()[0]
-    .body.forEach(node => {
+    .body.forEach((node) => {
       if (node.type !== 'VariableDeclaration') return
       for (let declarator of node.declarations) {
         const { init } = declarator
@@ -89,13 +89,13 @@ module.exports = function findImports(root, statement) {
     if (imported === 'default') {
       matches = imports
         .find(j.ImportDefaultSpecifier)
-        .filter(p => getImportKind(p) === importKind)
+        .filter((p) => getImportKind(p) === importKind)
       if (matches.size()) return matches.nodes()[0].local
       matches = imports
         .find(j.ImportSpecifier, {
           imported: { name: 'default' },
         })
-        .filter(p => getImportKind(p) === importKind)
+        .filter((p) => getImportKind(p) === importKind)
       if (matches.size()) return matches.nodes()[0].local
       if (defaultRequires.length) {
         return defaultRequires[defaultRequires.length - 1].id
@@ -109,7 +109,7 @@ module.exports = function findImports(root, statement) {
         .find(j.ImportSpecifier, {
           imported: { name: imported },
         })
-        .filter(p => getImportKind(p) === importKind)
+        .filter((p) => getImportKind(p) === importKind)
       if (matches.size()) return matches.nodes()[0].local
     }
     for (let node of requires) {
@@ -134,7 +134,7 @@ module.exports = function findImports(root, statement) {
 
   const result = {}
   if (statement.type === 'ImportDeclaration') {
-    statement.specifiers.forEach(desiredSpecifier => {
+    statement.specifiers.forEach((desiredSpecifier) => {
       if (desiredSpecifier.type === 'ImportNamespaceSpecifier') {
         const found = imports.find(j.ImportNamespaceSpecifier)
         if (found.size())

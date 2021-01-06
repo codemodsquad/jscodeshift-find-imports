@@ -46,4 +46,34 @@ calls to search for (e.g. `const foo = require('foo')`), or an array of them.
 An object where each key is an identifier from your search statement(s) that was found, and the
 corresponding value is the AST for the local binding for that import (either an `Identifier` or
 `MemberExpression` node). For example, if you search for `const {bar} = require('bar')` but the
-source code has `const foo = require('bar').bar`, the result will have `bar: j.identifier(foo)`.
+source code has `const foo = require('bar').bar`, the result will have `bar: { type: 'Identifier', name: 'bar' }`.
+
+The local binding will be a `MemberExpression` in cases like this:
+
+```js
+const code = `
+import React from 'react'
+`
+const imports = findImports(
+  j(code),
+  statement`import { Component } from 'react'`
+)
+```
+
+In this case `imports` would be
+
+```js
+{
+  Component: {
+    type: 'MemberExpression',
+    object: {
+      type: 'Identifier',
+      name: 'React',
+    },
+    property: {
+      type: 'Identifier',
+      name: 'Component',
+    },
+  },
+}
+```
