@@ -113,6 +113,6 @@
     }
   },
   "peerDependencies": {
-    "jscodeshift": "^0.7.0 || ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0"
+    "jscodeshift": ">=0.7 <1"
   }
 }
